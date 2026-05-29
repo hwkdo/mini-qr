@@ -1,4 +1,6 @@
----
+# Project-scoped names avoid clashes with the other miniqr stack in ../src
+name: miniqr-hwkdo
+
 services:
   mini-qr:
     image: ghcr.io/hwkdo/mini-qr:latest
@@ -11,19 +13,20 @@ services:
         VITE_DEFAULT_PRESET: ${VITE_DEFAULT_PRESET:-${DEFAULT_PRESET:-}}
         VITE_DEFAULT_DATA_TO_ENCODE: ${DEFAULT_DATA:-}
         VITE_QR_CODE_PRESETS: ${VITE_QR_CODE_PRESETS:-}
-        VITE_FRAME_PRESET: ${FRAME_PRESET:-}
-        VITE_FRAME_PRESETS: ${FRAME_PRESETS:-}
-        VITE_DISABLE_LOCAL_STORAGE: ${DISABLE_LOCAL_STORAGE:-false}
-    container_name: mini-qr
+        VITE_FRAME_PRESET: ${VITE_FRAME_PRESET:-${FRAME_PRESET:-}}
+        VITE_FRAME_PRESETS: ${VITE_FRAME_PRESETS:-${FRAME_PRESETS:-}}
+        VITE_DISABLE_LOCAL_STORAGE: ${VITE_DISABLE_LOCAL_STORAGE:-${DISABLE_LOCAL_STORAGE:-false}}
+    container_name: mini-qr-hwkdo
     restart: unless-stopped
     networks:
       - mini-qr-network
 
   nginx-proxy:
     image: nginx:alpine
-    container_name: nginx-proxy
+    container_name: nginx-proxy-hwkdo
     ports:
-      - 80:80
+      # Default 8888 — ports 80/8080 are often taken (../src stack, Traefik, …)
+      - ${MINIQR_HTTP_PORT:-8888}:80
     restart: unless-stopped
     configs:
       - source: nginx-proxy-conf

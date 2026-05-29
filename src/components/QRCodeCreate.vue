@@ -753,10 +753,22 @@ onMounted(() => {
   }
 
   // Apply frame preset when QR preset does not define a frame
+  // Only apply default frame preset if QR env preset did not already enable a frame
   if (!showFrame.value) {
     const framePreset = allFramePresets.find((p) => p.name === selectedFramePresetKey.value)
     if (framePreset) {
       applyFramePreset(framePreset)
+    }
+  } else {
+    // Re-apply frame styles after mount so UI matches env/QR preset (avoids stale defaults)
+    const preset = selectedPreset.value as Preset & { frame?: QRCodeFrameConfig }
+    if (preset.frame) {
+      applyFrameFromPreset(preset.frame)
+    } else {
+      const framePreset = allFramePresets.find((p) => p.name === selectedFramePresetKey.value)
+      if (framePreset) {
+        applyFramePreset(framePreset)
+      }
     }
   }
 
