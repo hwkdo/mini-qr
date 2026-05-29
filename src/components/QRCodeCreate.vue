@@ -315,19 +315,37 @@ const frameStyle = ref<FrameStyle>({
   padding: '16px'
 })
 
+const selectedFramePresetKey = ref<string>(
+  import.meta.env.VITE_FRAME_PRESET || defaultFramePreset.name
+)
+
+function toFrameStyle(style: Partial<FrameStyle>): FrameStyle {
+  return {
+    textColor: style.textColor ?? '#000000',
+    backgroundColor: style.backgroundColor ?? '#ffffff',
+    borderColor: style.borderColor ?? '#000000',
+    borderWidth: style.borderWidth ?? '1px',
+    borderRadius: style.borderRadius ?? '8px',
+    padding: style.padding ?? '16px',
+    ...(style.fontFamily ? { fontFamily: style.fontFamily } : {})
+  }
+}
+
+function loadFrameFont(fontFamily?: string) {
+  if (!fontFamily) return
+  const font = FONT_OPTIONS.find((f) => f.value === fontFamily)
+  if (font?.googleFontName) {
+    loadGoogleFont(font.googleFontName)
+  }
+}
+
 function applyFrameFromPreset(frame?: QRCodeFrameConfig) {
   if (!frame) return
   showFrame.value = true
   frameText.value = frame.text || defaultFrameText.value
   frameTextPosition.value = frame.position || 'bottom'
-  frameStyle.value = { ...frameStyle.value, ...frame.style }
-  const restoredFontFamily = frame.style?.fontFamily
-  if (restoredFontFamily) {
-    const font = FONT_OPTIONS.find((f) => f.value === restoredFontFamily)
-    if (font?.googleFontName) {
-      loadGoogleFont(font.googleFontName)
-    }
-  }
+  frameStyle.value = toFrameStyle(frame.style)
+  loadFrameFont(frame.style?.fontFamily)
 }
 
 function applySelectedPresetToState() {
@@ -355,6 +373,10 @@ function applySelectedPresetToState() {
   const frame = (preset as Preset & { frame?: QRCodeFrameConfig }).frame
   if (frame) {
     applyFrameFromPreset(frame)
+    const framePresetName = import.meta.env.VITE_FRAME_PRESET || preset.name
+    if (allFramePresets.some((p) => p.name === framePresetName)) {
+      selectedFramePresetKey.value = framePresetName
+    }
   } else {
     showFrame.value = false
   }
@@ -364,8 +386,6 @@ watch(selectedPreset, applySelectedPresetToState, { immediate: true })
 
 //#region /* Default QR code text */
 const defaultQRCodeText = computed(() => t('Have nice day!'))
-
-const selectedFramePresetKey = ref<string>(defaultFramePreset.name)
 const lastCustomLoadedFramePreset = ref<FramePreset>()
 const CUSTOM_LOADED_FRAME_PRESET_KEYS = [
   LAST_LOADED_LOCALLY_PRESET_KEY,
@@ -381,33 +401,31 @@ const allFramePresetOptions = computed(() => {
 
 function applyFramePreset(preset: FramePreset) {
   if (preset.style) {
-    frameStyle.value = { ...frameStyle.value, ...preset.style }
+    frameStyle.value = toFrameStyle(preset.style)
+    loadFrameFont(preset.style.fontFamily)
   }
   if (preset.text) frameText.value = preset.text
   if (preset.position) frameTextPosition.value = preset.position
+  showFrame.value = true
 }
 
-watch(
-  selectedFramePresetKey,
-  (newKey, prevKey) => {
-    if (newKey === prevKey || !newKey) return
+watch(selectedFramePresetKey, (newKey, prevKey) => {
+  if (newKey === prevKey || !newKey) return
 
-    if (
-      import.meta.env.VITE_DISABLE_LOCAL_STORAGE !== 'true' &&
-      CUSTOM_LOADED_FRAME_PRESET_KEYS.includes(newKey) &&
-      lastCustomLoadedFramePreset.value
-    ) {
-      applyFramePreset(lastCustomLoadedFramePreset.value)
-      return
-    }
+  if (
+    import.meta.env.VITE_DISABLE_LOCAL_STORAGE !== 'true' &&
+    CUSTOM_LOADED_FRAME_PRESET_KEYS.includes(newKey) &&
+    lastCustomLoadedFramePreset.value
+  ) {
+    applyFramePreset(lastCustomLoadedFramePreset.value)
+    return
+  }
 
-    const preset = allFramePresets.find((p) => p.name === newKey)
-    if (preset) {
-      applyFramePreset(preset)
-    }
-  },
-  { immediate: true }
-)
+  const preset = allFramePresets.find((p) => p.name === newKey)
+  if (preset) {
+    applyFramePreset(preset)
+  }
+})
 
 const frameSettings = computed(() => ({
   text: frameText.value,
@@ -731,6 +749,14 @@ onMounted(() => {
     } else {
       selectedPreset.value = { ...defaultPreset }
       selectedPresetKey.value = defaultPreset.name
+    }
+  }
+
+  // Apply frame preset when QR preset does not define a frame
+  if (!showFrame.value) {
+    const framePreset = allFramePresets.find((p) => p.name === selectedFramePresetKey.value)
+    if (framePreset) {
+      applyFramePreset(framePreset)
     }
   }
 
