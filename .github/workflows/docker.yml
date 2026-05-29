@@ -88,6 +88,27 @@ jobs:
             echo "cache-to=type=registry,mode=max,ref=ghcr.io/${{ steps.sanitize_names.outputs.lowercase }}/mini-qr-build-cache:${{ matrix.image }}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Load HWKDO build environment
+        run: |
+          set -a
+          # shellcheck source=/dev/null
+          source deploy/hwkdo.env
+          set +a
+          {
+            echo "BASE_PATH=${BASE_PATH:-/}"
+            echo "VITE_HIDE_CREDITS=${VITE_HIDE_CREDITS:-false}"
+            echo "VITE_DEFAULT_PRESET=${VITE_DEFAULT_PRESET:-}"
+            echo "VITE_DEFAULT_DATA_TO_ENCODE=${VITE_DEFAULT_DATA_TO_ENCODE:-}"
+            echo "VITE_FRAME_PRESET=${VITE_FRAME_PRESET:-}"
+            echo "VITE_FRAME_PRESETS=${VITE_FRAME_PRESETS:-}"
+            echo "VITE_DISABLE_LOCAL_STORAGE=${VITE_DISABLE_LOCAL_STORAGE:-false}"
+          } >> "$GITHUB_ENV"
+          {
+            echo "VITE_QR_CODE_PRESETS<<EOF"
+            echo "$VITE_QR_CODE_PRESETS"
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
       - name: Build and push image
         uses: docker/build-push-action@v5.1.0
         with:
@@ -99,6 +120,14 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/${{ steps.sanitize_names.outputs.lowercase }}/mini-qr-build-cache:${{matrix.image}}
           cache-to: ${{ steps.cache-target.outputs.cache-to }}
           build-args: |
+            BASE_PATH=${{ env.BASE_PATH }}
+            VITE_HIDE_CREDITS=${{ env.VITE_HIDE_CREDITS }}
+            VITE_DEFAULT_PRESET=${{ env.VITE_DEFAULT_PRESET }}
+            VITE_DEFAULT_DATA_TO_ENCODE=${{ env.VITE_DEFAULT_DATA_TO_ENCODE }}
+            VITE_QR_CODE_PRESETS=${{ env.VITE_QR_CODE_PRESETS }}
+            VITE_FRAME_PRESET=${{ env.VITE_FRAME_PRESET }}
+            VITE_FRAME_PRESETS=${{ env.VITE_FRAME_PRESETS }}
+            VITE_DISABLE_LOCAL_STORAGE=${{ env.VITE_DISABLE_LOCAL_STORAGE }}
             VITE_APP_VERSION=${{ github.ref_name }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}

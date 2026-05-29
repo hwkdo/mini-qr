@@ -1,7 +1,19 @@
 ---
 services:
   mini-qr:
-    image: ghcr.io/lyqht/mini-qr:latest
+    image: ghcr.io/hwkdo/mini-qr:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BASE_PATH: ${BASE_PATH:-/}
+        VITE_HIDE_CREDITS: ${HIDE_CREDITS:-false}
+        VITE_DEFAULT_PRESET: ${VITE_DEFAULT_PRESET:-${DEFAULT_PRESET:-}}
+        VITE_DEFAULT_DATA_TO_ENCODE: ${DEFAULT_DATA:-}
+        VITE_QR_CODE_PRESETS: ${VITE_QR_CODE_PRESETS:-}
+        VITE_FRAME_PRESET: ${FRAME_PRESET:-}
+        VITE_FRAME_PRESETS: ${FRAME_PRESETS:-}
+        VITE_DISABLE_LOCAL_STORAGE: ${DISABLE_LOCAL_STORAGE:-false}
     container_name: mini-qr
     restart: unless-stopped
     networks:

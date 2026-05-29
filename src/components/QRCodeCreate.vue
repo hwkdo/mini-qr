@@ -247,31 +247,6 @@ const allPresetOptions = computed(() => {
 const selectedPreset = ref<
   Preset & { key?: string; qrOptions?: { errorCorrectionLevel: ErrorCorrectionLevel } }
 >(defaultPreset)
-watch(selectedPreset, () => {
-  // Note: We no longer auto-fill data from presets. Users can keep their own data
-  // while changing the visual style. The QR preview will show default text if empty.
-
-  image.value = selectedPreset.value.image
-  width.value = selectedPreset.value.width
-  height.value = selectedPreset.value.height
-  margin.value = selectedPreset.value.margin
-  imageMargin.value = selectedPreset.value.imageOptions.margin
-  imageSize.value = selectedPreset.value.imageOptions.imageSize
-  dotsOptionsColor.value = selectedPreset.value.dotsOptions.color
-  dotsOptionsType.value = selectedPreset.value.dotsOptions.type
-  cornersSquareOptionsColor.value = selectedPreset.value.cornersSquareOptions.color
-  cornersSquareOptionsType.value = selectedPreset.value.cornersSquareOptions.type
-  cornersDotOptionsColor.value = selectedPreset.value.cornersDotOptions.color
-  cornersDotOptionsType.value = selectedPreset.value.cornersDotOptions.type
-  styleBorderRadius.value = getNumericCSSValue(selectedPreset.value.style.borderRadius as string)
-  styleBackground.value = selectedPreset.value.style.background
-  includeBackground.value = selectedPreset.value.style.background !== 'transparent'
-  errorCorrectionLevel.value =
-    selectedPreset.value.qrOptions && selectedPreset.value.qrOptions.errorCorrectionLevel
-      ? selectedPreset.value.qrOptions.errorCorrectionLevel
-      : 'Q'
-  // Most presets don't have a frame, so we set it to false by default
-})
 
 const selectedPresetKey = ref<string>(
   isLocalStorageEnabled() && hasStoredQRConfig()
@@ -331,9 +306,6 @@ const frameText = ref<string>('')
 const frameTextPosition = ref<'top' | 'bottom' | 'left' | 'right'>('bottom')
 const showFrame = ref(false)
 
-//#region /* Default QR code text */
-const defaultQRCodeText = computed(() => t('Have nice day!'))
-
 const frameStyle = ref<FrameStyle>({
   textColor: '#000000',
   backgroundColor: '#ffffff',
@@ -342,6 +314,56 @@ const frameStyle = ref<FrameStyle>({
   borderRadius: '8px',
   padding: '16px'
 })
+
+function applyFrameFromPreset(frame?: QRCodeFrameConfig) {
+  if (!frame) return
+  showFrame.value = true
+  frameText.value = frame.text || defaultFrameText.value
+  frameTextPosition.value = frame.position || 'bottom'
+  frameStyle.value = { ...frameStyle.value, ...frame.style }
+  const restoredFontFamily = frame.style?.fontFamily
+  if (restoredFontFamily) {
+    const font = FONT_OPTIONS.find((f) => f.value === restoredFontFamily)
+    if (font?.googleFontName) {
+      loadGoogleFont(font.googleFontName)
+    }
+  }
+}
+
+function applySelectedPresetToState() {
+  const preset = selectedPreset.value
+  // Note: We no longer auto-fill data from presets. Users can keep their own data
+  // while changing the visual style. The QR preview will show default text if empty.
+
+  image.value = preset.image
+  width.value = preset.width
+  height.value = preset.height
+  margin.value = preset.margin
+  imageMargin.value = preset.imageOptions.margin
+  imageSize.value = preset.imageOptions.imageSize
+  dotsOptionsColor.value = preset.dotsOptions.color
+  dotsOptionsType.value = preset.dotsOptions.type
+  cornersSquareOptionsColor.value = preset.cornersSquareOptions.color
+  cornersSquareOptionsType.value = preset.cornersSquareOptions.type
+  cornersDotOptionsColor.value = preset.cornersDotOptions.color
+  cornersDotOptionsType.value = preset.cornersDotOptions.type
+  styleBorderRadius.value = getNumericCSSValue(preset.style.borderRadius as string)
+  styleBackground.value = preset.style.background
+  includeBackground.value = preset.style.background !== 'transparent'
+  errorCorrectionLevel.value =
+    preset.qrOptions?.errorCorrectionLevel ? preset.qrOptions.errorCorrectionLevel : 'Q'
+  const frame = (preset as Preset & { frame?: QRCodeFrameConfig }).frame
+  if (frame) {
+    applyFrameFromPreset(frame)
+  } else {
+    showFrame.value = false
+  }
+}
+
+watch(selectedPreset, applySelectedPresetToState, { immediate: true })
+
+//#region /* Default QR code text */
+const defaultQRCodeText = computed(() => t('Have nice day!'))
 
 const selectedFramePresetKey = ref<string>(defaultFramePreset.name)
 const lastCustomLoadedFramePreset = ref<FramePreset>()
