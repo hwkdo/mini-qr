@@ -8,4 +8,4 @@
 - **GitHub Actions** loads this file when building `ghcr.io/hwkdo/mini-qr`.
 - **Local:** `cp deploy/hwkdo.env .env` then `docker compose up -d --build`.
 
-After changing presets, commit `hwkdo.env` and push to `main` to publish a new image.
+After changing presets, commit `hwkdo.env` and push to `main` to publish a new image
